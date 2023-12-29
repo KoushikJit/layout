@@ -143,7 +143,7 @@ const Home: React.FC = () => {
     // 4. with a interval
     setInterval(() => {
         runPredictions();
-    }, 100);
+    }, 300);
 
     return (
         <div className="flex h-screen p-4 space-x-2">
@@ -190,7 +190,7 @@ const Home: React.FC = () => {
                             <Button variant={'outline'} size={'icon'}><Volume2 /></Button>
                         </PopoverTrigger>
                         <PopoverContent side='right'>
-                            <Slider defaultValue={[volume]} max={1} step={0.1} onValueCommit={(val) => setVolume(val[0])} onValueChange={(val) => beep(val[0])} />
+                            <Slider defaultValue={[volume]} max={1} step={0.1} onValueCommit={(val) => { setVolume(val[0]); beep(val[0]); }} />
                         </PopoverContent>
                     </Popover>
                 </div>
