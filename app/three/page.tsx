@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { beep } from '../utils/beepUtils';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Slider } from "@/components/ui/slider"
+import { drawOnCanvas } from '../utils/drawUtils';
 
 require('@tensorflow/tfjs-backend-cpu');
 require('@tensorflow/tfjs-backend-webgl');
@@ -26,8 +27,14 @@ const Home: React.FC = () => {
     // state volume
     const [volume, setVolume] = useState(0.8);
 
+    //state model
+    const [model, setModel] = useState<ObjectDetection>();
+
+
     // Refs
     const webcamRef = useRef<Webcam>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const imageCaptureRef = useRef<ImageCapture | null>(null);
     const recordedChunksRef = useRef<any[]>([]);
@@ -35,55 +42,48 @@ const Home: React.FC = () => {
     //
     // Initialize MediaRecorder
     useEffect(() => {
-        if (webcamRef.current) {
-            try {
-                const stream = (webcamRef.current.video as any)?.captureStream();
-                if (stream) {
-                    mediaRecorderRef.current = new MediaRecorder(stream);
-                    mediaRecorderRef.current.ondataavailable = (e) => {
-                        if (e.data.size > 0) {
-                            console.log(`datasize: ${e.data.size}`)
-                            recordedChunksRef.current.push(e.data);
-                            console.log(`blobarray: ${recordedChunksRef.current.length}`)
+        if (webcamRef.current && model) {
+            const stream = (webcamRef.current.video as any)?.captureStream();
+            if (stream) {
+                mediaRecorderRef.current = new MediaRecorder(stream);
+                mediaRecorderRef.current.ondataavailable = (e) => {
+                    if (e.data.size > 0) {
+                        console.log(`datasize: ${e.data.size}`)
+                        recordedChunksRef.current.push(e.data);
+                        console.log(`blobarray: ${recordedChunksRef.current.length}`)
 
-                            // Combine recorded chunks into a single video
-                            console.log('length before pop: ' + recordedChunksRef.current.length)
-                            const recordedBlob = new Blob([recordedChunksRef.current.shift()], { type: 'video' });
-                            const videoUrl = URL.createObjectURL(recordedBlob);
-                            console.log('Recorded video URL:', videoUrl);
+                        // Combine recorded chunks into a single video
+                        console.log('length before pop: ' + recordedChunksRef.current.length)
+                        const recordedBlob = new Blob([recordedChunksRef.current.shift()], { type: 'video' });
+                        const videoUrl = URL.createObjectURL(recordedBlob);
+                        console.log('Recorded video URL:', videoUrl);
 
-                            // Download the video or perform further actions with the video URL
-                            // For download:
-                            const a = document.createElement('a');
-                            a.href = videoUrl;
-                            a.download = `${formatDate(new Date())}.webm`;
-                            a.click();
-                        }
-                    };
-                    mediaRecorderRef.current.onstart = (e) => {
-                        setIsRecording(true);
-                    };
-                    mediaRecorderRef.current.onstop = (e) => {
-                        setIsRecording(false);
+                        // Download the video or perform further actions with the video URL
+                        // For download:
+                        const a = document.createElement('a');
+                        a.href = videoUrl;
+                        a.download = `${formatDate(new Date())}.webm`;
+                        a.click();
                     }
-
-                    // image capture ref
-                    // imageCaptureRef.current = new ImageCapture(stream);
+                };
+                mediaRecorderRef.current.onstart = (e) => {
+                    setIsRecording(true);
+                };
+                mediaRecorderRef.current.onstop = (e) => {
+                    setIsRecording(false);
                 }
-            } catch (error) {
-                toast(JSON.stringify(error));
             }
-
         }
-    }, [webcamRef]);
+    }, [webcamRef, model]);
 
     // Function to start recording
-    const startRecording = () => {
+    const startRecording = (withBeep: boolean) => {
         // Start recording
         if (webcamRef.current && mediaRecorderRef.current?.state !== 'recording') {
             // recordedChunksRef.current = []; // Clear existing chunks
             console.log('starting media record')
             mediaRecorderRef.current?.start();
+            withBeep && beep(volume);
             // Stop recording after 30 seconds
             setTimeout(() => {
                 if (mediaRecorderRef.current?.state === 'recording') {
@@ -97,6 +97,54 @@ const Home: React.FC = () => {
         }
     };
 
+    // 1. init model 
+    const initModel = async () => {
+        // Load the model.
+        // TODO : setLoading(true);
+        const loadedModel = await cocoSsd.load();
+        // set the model in state
+        setModel(loadedModel);
+        // TODO: setLoading(false);
+    }
+
+    // 2. only on load
+    useEffect(() => {
+        initModel();
+
+    }, []);
+
+    // 3. run predictions
+    const runPredictions = async () => {
+        // Classify the image.
+        if (model &&
+            typeof webcamRef.current !== "undefined" &&
+            webcamRef.current !== null &&
+            webcamRef.current.video?.readyState === 4
+        ) {
+            const predictions = await model?.detect(webcamRef.current?.video as HTMLVideoElement);
+            resizeCanvas(canvasRef, webcamRef);
+            drawOnCanvas(predictions, canvasRef.current?.getContext("2d"));
+
+            // Start recording when objects are detected
+
+            if (predictions?.length > 0) {
+                // if person
+                let person: boolean = false;
+                predictions.forEach(prediction => {
+                    person = prediction.class === 'person' && prediction.score > 0.20
+                });
+                if (person) {
+                    startRecording(true);
+                }
+            }
+        }
+    }
+
+    // 4. with a interval
+    setInterval(() => {
+        runPredictions();
+    }, 100);
+
     return (
         <div className="flex h-screen p-4 space-x-2">
             {/* Left division */}
@@ -105,10 +153,15 @@ const Home: React.FC = () => {
                 <div className="w-full h-full flex relative justify-start">
                     <Webcam ref={webcamRef}
                         className=''
+                        style={{ padding: 20, position: 'absolute', width: '100%', height: '100%', objectFit: 'contain' }}
                         audio={false}
                         mirrored={true} // Example: Add other props as needed
                     >
                     </Webcam>
+                    <canvas ref={canvasRef}
+                        // style={{ zIndex: 10, padding: 20, position: 'absolute', width: '100%', height: '100%', objectFit: 'contain', }}
+                        className='z-40' // Example: Add other props as needed
+                    />
                 </div>
             </div>
 
@@ -137,7 +190,7 @@ const Home: React.FC = () => {
                             <Button variant={'outline'} size={'icon'}><Volume2 /></Button>
                         </PopoverTrigger>
                         <PopoverContent side='right'>
-                            <Slider defaultValue={[volume]} max={1} step={0.1} onValueCommit={(val) => setVolume(val[0])} onValueChange={(val)=>beep(val[0])} />
+                            <Slider defaultValue={[volume]} max={1} step={0.1} onValueCommit={(val) => setVolume(val[0])} onValueChange={(val) => beep(val[0])} />
                         </PopoverContent>
                     </Popover>
                 </div>
@@ -183,8 +236,8 @@ const Home: React.FC = () => {
             toast('Recording saved to downloads')
         } else {
             // 2. else start recording
-            startRecording();
-            beep(volume);
+            startRecording(false);
+            // beep(volume); // TODO:  remove this and place it when auto record starts
             toast('Recording a 30 sec clip');
         }
     }
@@ -250,5 +303,18 @@ const base64ToBlob = (base64Data: any) => {
     return new Blob([arrayBuffer], { type: 'image/png' }); // Specify the image type here
 };
 
+// resize canvas
+function resizeCanvas(canvasRef: React.RefObject<HTMLCanvasElement>, webcamRef: React.RefObject<Webcam>) {
+    const canvas = canvasRef.current;
+    const webcam = webcamRef.current?.video;
+
+    if (canvas && webcam) {
+        const { videoWidth, videoHeight } = webcam;
+
+        // Set canvas dimensions to match the video's intrinsic dimensions
+        canvas.width = videoWidth;
+        canvas.height = videoHeight;
+    }
+}
 
 export default Home;
