@@ -6,7 +6,7 @@ import { ModeToggle } from '@/components/mode-toggle';
 import { Badge } from '@/components/ui/badge';
 import { toast } from "sonner"
 import { Button, buttonVariants } from '@/components/ui/button';
-import { ArrowRightFromLine, Camera, FlipHorizontal, MoonIcon, PersonStanding, SunIcon, UserSearch, Video, VideoOff, Volume2 } from 'lucide-react';
+import { ArrowRightFromLine, Camera, PersonStanding, UserSearch, Video, VideoOff, Volume2 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import Webcam from 'react-webcam';
 import { start } from 'repl';
@@ -23,11 +23,6 @@ import {
     ResizablePanel,
     ResizablePanelGroup,
 } from "@/components/ui/resizable"
-import FeatureHighlights from '@/components/features';
-import { useTheme } from 'next-themes';
-import SocialMediaLinks from '@/components/social-links';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faGithub, faLinkedin, faYoutube } from '@fortawesome/free-brands-svg-icons';
 
 
 require('@tensorflow/tfjs-backend-cpu');
@@ -45,9 +40,6 @@ const Home: React.FC = () => {
     const [isRecording, setIsRecording] = useState<boolean>(false);
     // state volume
     const [volumeState, setVolumeState] = useState(0.8);
-    // state mirrored
-    const [mirrored, setMirrored] = useState(false);
-
     //state model
     const [model, setModel] = useState<ObjectDetection>();
 
@@ -111,7 +103,7 @@ const Home: React.FC = () => {
         // unset loading state when camera permission given
         setTimeout(() => {
             setLoading(false);
-        }, 2000);
+        }, 5000);
     }, [webcamRef, model]);
 
     useEffect(() => {
@@ -126,7 +118,7 @@ const Home: React.FC = () => {
             // }
         }
         return () => clearInterval(interval);
-    }, [webcamRef, model, airecordenabled, volumeState, mirrored])
+    }, [webcamRef, model, airecordenabled, volumeState])
 
 
     // Function to start recording
@@ -186,7 +178,7 @@ const Home: React.FC = () => {
 
             const predictions = await model?.detect(webcamRef.current?.video as HTMLVideoElement);
             resizeCanvas(canvasRef, webcamRef);
-            drawOnCanvas(mirrored, predictions, canvasRef.current?.getContext("2d"));
+            drawOnCanvas(true, predictions, canvasRef.current?.getContext("2d"));
 
             // Start recording when objects are detected
 
@@ -240,69 +232,74 @@ const Home: React.FC = () => {
     // }
 
     return (
-        <div className='flex h-screen' >
-            <div className="flex h-screen p-4 space-x-2">
-                {/* Left division */}
-                <div id='left-division' className="flex justify-center items-center relative">
-                    {/* Set a wrapper to ensure the Webcam fits within the left division */}
-                    <div className="w-full h-full flex relative justify-start">
-                        <Webcam ref={webcamRef}
-                            className=''
-                            style={{
-                                position: 'absolute',
-                                width: '100%', height: '100%', objectFit: 'contain'
-                            }}
-                            audio={false}
-                            mirrored={mirrored} // Example: Add other props as needed
-                        >
-                        </Webcam>
-                        <canvas ref={canvasRef}
-                            style={{}}
-                            // style={{ zIndex: 10, padding: 20, position: 'absolute', width: '100%', height: '100%', objectFit: 'contain', }}
-                            className='z-10' // Example: Add other props as needed
-                        />
+        <div className='flex h-screen space-x-2' >
+            <ResizablePanelGroup direction="horizontal" className='relative flex h-screen'>
+                <ResizablePanel className='flex h-screen'>
+                    {/* place for video */}
+                    {/* Left division */}
+                    <div id='left-division' className="flex justify-center items-center relative">
+                        {/* Set a wrapper to ensure the Webcam fits within the left division */}
+                        <div className="w-full h-full flex relative justify-start">
+                            <Webcam ref={webcamRef}
+                                className=''
+                                style={{
+                                    padding: 15,
+                                    position: 'absolute',
+                                    width: '100%', height: '100%', objectFit: 'contain'
+                                }}
+                                audio={false}
+                                mirrored={true} // Example: Add other props as needed
+                            >
+                            </Webcam>
+                            <canvas ref={canvasRef}
+                                style={{}}
+                                // style={{ zIndex: 10, padding: 20, position: 'absolute', width: '100%', height: '100%', objectFit: 'contain', }}
+                                className='z-10' // Example: Add other props as needed
+                            />
+                        </div>
                     </div>
-                </div>
+                </ResizablePanel>
+                <ResizableHandle withHandle />
+                <ResizablePanel className='relative'>
+                    {/* place for buttons and tutorial */}
+                    {/* Right division */}
+                    <div className='absolute h-full'>
+                        <div id='right-division' className="border-primary/5 border-2 w-[4.75rem] flex flex-col gap-2 justify-between shadow-md rounded-md p-4">
+                            {/* top slice */}
+                            <div>
+                                
+                            </div>
+                            <div id='top' >
+                            </div>
+                            {/* bottom slice */}
+                            <div id='middle' className='flex flex-col gap-2'>
 
-                {/* Right division */}
-                <div id='right-division' className="border-primary/5 border-2 max-w-xs flex flex-col gap-2 justify-between shadow-md rounded-md p-4">
-                    {/* top slice */}
-                    <div id='top' className='flex flex-col gap-2'>
-                        <ModeToggle />
-                        <Button variant={'outline'} size={'icon'} onClick={onSetMirrored}><FlipHorizontal /></Button>
-                        <Separator className='my-4' />
+                                <ModeToggle />
+                                <Separator className='my-4' />
+                                <Button variant={'outline'} size={'icon'} onClick={userPromptScreenshot}><Camera /></Button>
+                                <Button variant={isRecording ? 'destructive' : 'outline'} size={'icon'} onClick={userPromptRecord}><Video /></Button>
+                                <Separator className='my-4' />
+                                {/* <Button variant={airecordenabled ? 'destructive' : 'outline'} size={'icon'} onClick={toggleAutoRecord}><UserSearch /></Button> */}
+                                <Button variant={airecordenabled ? 'destructive' : 'outline'} size={'icon'} onClick={toggleAutoRecord}>{airecordenabled ? <Rings color='#ffffff' height={45} /> : <PersonStanding />}</Button>
 
+                            </div>
+                            <div id='bottom' className='flex flex-col gap-2'>
+                                <Separator className='my-4' />
+                                {/* <Link className={buttonVariants({ variant: 'outline', size: 'icon' })} href={'/beep'}><ArrowRightFromLine /></Link> */}
+                                {/* Audio Button Popover */}
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant={'outline'} size={'icon'}><Volume2 /></Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent side='right'>
+                                        <Slider defaultValue={[volumeState]} max={1} step={0.1} onValueCommit={(val) => { setVolumeState(val[0]); beep(val[0]) }} />
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
+                        </div>
                     </div>
-                    {/* bottom slice */}
-                    <div id='middle' className='flex flex-col gap-2'>
-                        <Button variant={'outline'} size={'icon'} onClick={userPromptScreenshot}><Camera /></Button>
-                        <Button variant={isRecording ? 'destructive' : 'outline'} size={'icon'} onClick={userPromptRecord}><Video /></Button>
-                        <Separator className='my-4' />
-                        <Button variant={airecordenabled ? 'destructive' : 'outline'} size={'icon'} onClick={toggleAutoRecord}>{airecordenabled ? <Rings color='#ffffff' height={45} /> : <PersonStanding />}</Button>
-                        <Separator className='my-4' />
-
-                        {/* <Button variant={airecordenabled ? 'destructive' : 'outline'} size={'icon'} onClick={toggleAutoRecord}><UserSearch /></Button> */}
-
-                    </div>
-                    <div id='bottom' className='flex flex-col gap-2'>
-                        <Separator className='my-4' />
-                        {/* <Link className={buttonVariants({ variant: 'outline', size: 'icon' })} href={'/beep'}><ArrowRightFromLine /></Link> */}
-                        {/* Audio Button Popover */}
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant={'outline'} size={'icon'}><Volume2 /></Button>
-                            </PopoverTrigger>
-                            <PopoverContent side='right'>
-                                <Slider defaultValue={[volumeState]} max={1} step={0.1} onValueCommit={(val) => { setVolumeState(val[0]); beep(val[0]) }} />
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-                </div>
-                {/* <Separator orientation='vertical' /> */}
-                <div className='flex flex-1 h-full overflow-y-scroll'>
-                    <RenderFeatureHighlights />
-                </div>
-            </div>
+                </ResizablePanel>
+            </ResizablePanelGroup>
             {loading &&
                 <div
                     className='absolute w-full h-full z-30 flex items-center justify-center bg-primary-foreground'
@@ -317,63 +314,6 @@ const Home: React.FC = () => {
             }
         </div>
     );
-
-    // Inner components
-    function RenderFeatureHighlights() {
-        const { setTheme, theme } = useTheme()
-
-        return (
-            <div className='text-xs text-muted-foreground'>
-                <ul className='space-y-4'>
-                    <li>
-                        <strong>Dark Mode/Sys Theme 🌗</strong>
-                        <p>Toggle between dark mode and system theme.</p>
-                        {/* <Button className='my-2 h-6 w-6' variant={'outline'} size={'icon'} >{theme === 'dark' ? <MoonIcon size={14} /> : <SunIcon size={14} />}</Button> */}
-                        <Button className='my-2 h-6 w-6' variant={'outline'} size={'icon'} ><SunIcon size={14} /></Button> / <Button className='my-2 h-6 w-6' variant={'outline'} size={'icon'} ><MoonIcon size={14} /></Button>
-                    </li>
-                    <li>
-                        <strong>Horizontal Flip ↔️</strong>
-                        <p>Adjust horizontal orientation.</p>
-                        <Button className='my-2 h-6 w-6' variant={'outline'} size={'icon'} onClick={onSetMirrored}><FlipHorizontal size={14} /></Button>
-                    </li>
-                    <Separator />
-                    <li>
-                        <strong>Take Pictures 📸</strong>
-                        <p>Capture snapshots at any moment from the video feed.</p>
-                        <Button className='my-2 h-6 w-6' variant={'outline'} size={'icon'} onClick={userPromptScreenshot} ><Camera size={14} /></Button>
-                    </li>
-                    <li>
-                        <strong>Manual Video Recording 📽️</strong>
-                        <p>Manually record video clips as needed.</p>
-                        <Button className='my-2 h-6 w-6' variant={isRecording ? 'destructive' : 'outline'} size={'icon'} onClick={userPromptRecord}><Video size={14} /></Button>
-                    </li>
-                    <Separator />
-                    <li>
-                        <strong>Enable/Disable Auto Record 🚫</strong>
-                        <p>Option to enable/disable automatic video recording whenever required.</p>
-                        <Button className='my-2 h-6 w-6' variant={airecordenabled ? 'destructive' : 'outline'} size={'icon'} onClick={toggleAutoRecord}>{airecordenabled ? <Rings color='#ffffff' height={30} /> : <PersonStanding size={14} />}</Button>
-                    </li>
-                    <li>
-                        <strong>Volume Slider 🔊</strong>
-                        <p>Adjust the volume level of the notifications.</p>
-                    </li>
-                    <li>
-                        <strong>Camera Feed Highlighting 🎨</strong>
-                        <p>Highlights persons in <span style={{ color: '#FF0F0F' }}>red</span> and other objects in <span style={{ color: '#00B612' }}>green</span>.</p>
-                    </li>
-                    <Separator />
-                    <li className='space-y-4'>
-                        <strong>Share your thoughts 💬 </strong>
-
-                        <SocialMediaLinks />
-                        <br />
-                        <br />
-                        <br />
-                    </li>
-                </ul>
-            </div>
-        );
-    }
 
     //handler functions
     function userPromptRecord(event: any): void {
@@ -418,15 +358,6 @@ const Home: React.FC = () => {
             a.download = `${formatDate(new Date())}.png`;
             a.click();
             toast('Image saved to downloads')
-        }
-    }
-
-    // toggle mirrored
-    function onSetMirrored() {
-        if (mirrored) {
-            setMirrored(false);
-        } else {
-            setMirrored(true);
         }
     }
 

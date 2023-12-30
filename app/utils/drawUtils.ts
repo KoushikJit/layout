@@ -1,6 +1,7 @@
 import { DetectedObject, ObjectDetection } from "@tensorflow-models/coco-ssd";
 
 export function drawOnCanvas(
+  mirrored: boolean,
   predictions: DetectedObject[],
   ctx: CanvasRenderingContext2D | null | undefined
 ) {
@@ -18,24 +19,28 @@ export function drawOnCanvas(
       ctx.strokeStyle = color;
       ctx.fillStyle = color;
       ctx.lineWidth = 5;
-      ctx.font = "bold 16px Arial";
+      ctx.font = "12px Courier New";
 
       // draw with x, y, widht, height
       ctx.beginPath();
-
       // fill rect
-      ctx.fillStyle =
-        detectedObject.class === "person" && detectedObject.score > 0.4
-          ? "#FF0F0F"
-          : "#00B612";
+      ctx.fillStyle = detectedObject.class === "person" ? "#FF0F0F" : "#00B612";
       ctx.globalAlpha = 0.4;
-      ctx.roundRect(ctx.canvas.width - x, y, -width, height, 8);
+      if (mirrored) {
+        ctx.roundRect(ctx.canvas.width - x, y, -width, height, 8);
+      } else {
+        ctx.roundRect(x, y, width, height, 8);
+      }
       ctx.fill();
 
       //fill text
       ctx.globalAlpha = 1;
       ctx.fillStyle = "#000000";
-      ctx.fillText(name, ctx.canvas.width - x - 100, y + 20);
+      if (mirrored) {
+        ctx.fillText(name, ctx.canvas.width - x - 100, y + 20);
+      } else {
+        ctx.fillText(name, x + 10, y + 20);
+      }
     }
   });
 }
