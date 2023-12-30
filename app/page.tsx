@@ -203,42 +203,6 @@ const Home: React.FC = () => {
         }
     }
 
-    // const runPredictions = async () => {
-    //     // Classify the image.
-    //     if (model &&
-    //         typeof webcamRef.current !== "undefined" &&
-    //         webcamRef.current !== null &&
-    //         webcamRef.current.video?.readyState === 4
-    //     ) {
-    //         const predictions = await model?.detect(webcamRef.current?.video as HTMLVideoElement);
-    //         resizeCanvas(canvasRef, webcamRef);
-    //         drawOnCanvas(predictions, canvasRef.current?.getContext("2d"));
-
-    //         // Start recording when objects are detected
-    //         if (autoRecordEnabledVar) {
-    //             if (predictions?.length > 0) {
-    //                 // if person
-    //                 let person: boolean = false;
-    //                 predictions.forEach(prediction => {
-    //                     person = prediction.class === 'person' && prediction.score > 0.40
-    //                 });
-    //                 if (person) {
-    //                     startRecording(true);
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-
-    // 4. with a interval
-    // if (!interval) {
-    //     interval = setInterval(() => {
-    //         countCycle++;
-    //         console.log('count cycle: ' + countCycle);
-    //         runPredictions();
-    //     }, 1000);
-    // }
-
     return (
         <div className='flex h-screen' >
             <div className="flex h-screen p-4 space-x-2">
